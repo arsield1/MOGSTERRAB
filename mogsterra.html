@@ -1,0 +1,1490 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"/>
+<title>MOGS·TERRA — Logistic</title>
+<!-- ✅ Telegram Web App SDK — ОБЯЗАТЕЛЬНО первым скриптом -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,400;0,700;0,900;1,700;1,900&family=Barlow:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ─── RESET & BASE ─── */
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{
+  height:100%;
+  /* Используем цвета темы Telegram вместо захардкоженных */
+  background:var(--tg-theme-bg-color, #000);
+  color:var(--tg-theme-text-color, #fff);
+  font-family:'Barlow',sans-serif;
+  overscroll-behavior:none;
+}
+button{font-family:'Barlow Condensed',sans-serif;cursor:pointer;border:none;outline:none}
+a{text-decoration:none;color:inherit}
+
+/* ─── DESIGN TOKENS ─── */
+:root{
+  --bg:        #000000;
+  --surface:   #0a0a0a;
+  --card:      #000000;
+  --border:    #1c1c1c;
+  --border2:   #252525;
+  --white:     #ffffff;
+  --dim1:      #444444;
+  --dim2:      #2e2e2e;
+  --dim3:      #1a1a1a;
+  --font-disp: 'Barlow Condensed', sans-serif;
+  --font-body: 'Barlow', sans-serif;
+
+  /* ─── Safe area для iOS/TG ─── */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ─── APP SHELL ─── */
+#app{
+  max-width:430px;
+  margin:0 auto;
+  min-height:100vh;
+  min-height: 100dvh; /* dynamic viewport для TG */
+  background:var(--bg);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+  overflow-x:hidden;
+  /* учитываем safe-area (notch, навигация Android) */
+  padding-top: var(--safe-top);
+  padding-bottom: var(--safe-bottom);
+}
+
+/* ─── SCREENS ─── */
+.screen{
+  display:none;
+  flex-direction:column;
+  flex:1;
+  padding-bottom:calc(64px + var(--safe-bottom));
+  animation:fadeIn .18s ease;
+}
+.screen.active{display:flex}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ─── HERO ZONE ─── */
+.hero{
+  position:relative;
+  height:156px;
+  overflow:hidden;
+  background:#000;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.hero-ht{
+  position:absolute;inset:0;
+  background-image:radial-gradient(circle,#fff 1px,transparent 1px);
+  background-size:6px 6px;
+  opacity:.05;
+}
+.hero-glow{
+  position:absolute;top:-30px;right:20px;
+  width:200px;height:200px;
+  background-image:radial-gradient(circle,#fff 1px,transparent 1px);
+  background-size:5px 5px;
+  opacity:.09;
+  border-radius:50%;
+}
+.hero-brush1{position:absolute;top:22px;left:70px;width:80px;height:2px;background:#fff;opacity:.07;transform:rotate(-10deg)}
+.hero-brush2{position:absolute;top:62px;left:14px;width:44px;height:1.5px;background:#fff;opacity:.05;transform:rotate(7deg)}
+.hero-brush3{position:absolute;bottom:24px;right:30px;width:65px;height:1.5px;background:#fff;opacity:.06;transform:rotate(-4deg)}
+
+/* Figure silhouette */
+.hero-figure{
+  position:absolute;right:0;bottom:0;
+  width:118px;height:140px;
+  overflow:hidden;
+}
+.hero-figure svg{width:100%;height:100%}
+
+.hero-content{
+  position:relative;z-index:3;
+  padding:18px 20px 0;
+}
+.brand-line1{
+  font-family:var(--font-disp);
+  font-size:46px;font-weight:900;font-style:italic;
+  color:var(--white);line-height:.82;
+  letter-spacing:-1px;text-transform:uppercase;
+}
+.brand-sep{color:var(--dim2);font-weight:900;font-style:italic;margin:0 2px}
+.brand-line2{
+  font-family:var(--font-disp);
+  font-size:46px;font-weight:900;font-style:italic;
+  color:var(--white);line-height:.82;
+  letter-spacing:-1px;text-transform:uppercase;
+  margin-left:6px;
+}
+.brand-logistic{
+  font-family:var(--font-disp);
+  font-size:11px;font-weight:700;font-style:italic;
+  color:var(--dim2);text-transform:uppercase;letter-spacing:4px;
+  margin-top:5px;
+}
+.brand-sub{
+  font-family:var(--font-body);
+  font-size:9px;font-weight:400;
+  color:var(--dim3);text-transform:uppercase;letter-spacing:3px;
+  margin-top:3px;
+}
+.star-mark{
+  position:absolute;bottom:10px;right:14px;
+  color:var(--dim3);font-size:12px;z-index:4;
+  font-family:var(--font-body);
+}
+
+/* ─── DIVIDER ─── */
+.divline{height:1px;background:var(--border);margin:0 20px}
+.divline-full{height:1px;background:var(--border)}
+
+/* ─── SECTION HEADER ─── */
+.sec-hd{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:16px 20px 8px;
+}
+.sec-lbl{
+  font-family:var(--font-body);
+  font-size:9px;font-weight:400;
+  color:var(--dim2);text-transform:uppercase;letter-spacing:3px;
+}
+.sec-link{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  letter-spacing:2px;text-transform:uppercase;cursor:pointer;
+}
+.sec-link:active{color:var(--dim1)}
+
+/* ─── BALANCE CARD ─── */
+.bal-zone{padding:16px 20px 14px}
+.bal-ey{
+  font-family:var(--font-body);
+  font-size:9px;font-weight:400;
+  color:var(--dim2);text-transform:uppercase;letter-spacing:3px;margin-bottom:4px;
+}
+.bal-num{
+  font-family:var(--font-disp);
+  font-size:36px;font-weight:900;
+  color:var(--white);letter-spacing:-1px;line-height:1;
+}
+.bal-cents{font-size:20px;color:var(--dim1);font-weight:900}
+.bal-btns{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;margin-top:12px;
+}
+.btn-fill{
+  padding:11px 0;
+  font-family:var(--font-disp);
+  font-size:11px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;
+  background:var(--white);color:#000;
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-fill:active{opacity:.85}
+.btn-out{
+  padding:11px 0;
+  font-family:var(--font-disp);
+  font-size:11px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;
+  background:var(--bg);color:var(--white);
+  border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-out:active{background:var(--surface)}
+
+/* ─── PARCEL CARD ─── */
+.pcard{
+  margin:0 20px 10px;
+  background:var(--card);
+  border:1px solid var(--border);
+  padding:14px;cursor:pointer;
+  position:relative;overflow:hidden;
+  transition:border-color .15s;
+}
+.pcard:active{border-color:var(--border2);background:var(--surface)}
+.pcard-ht{
+  position:absolute;top:0;right:0;width:70px;height:70px;
+  background-image:radial-gradient(circle,#fff 1px,transparent 1px);
+  background-size:5px 5px;opacity:.04;
+}
+.pc-id{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  letter-spacing:2px;text-transform:uppercase;margin-bottom:3px;
+}
+.pc-name{
+  font-family:var(--font-disp);
+  font-size:15px;font-weight:900;
+  color:var(--white);text-transform:uppercase;
+  letter-spacing:.5px;margin-bottom:2px;
+}
+.pc-from{
+  font-family:var(--font-body);
+  font-size:10px;color:var(--dim2);margin-bottom:11px;
+}
+.pc-toprow{display:flex;justify-content:space-between;align-items:flex-start}
+.spill{
+  padding:3px 8px;
+  font-family:var(--font-disp);
+  font-size:9px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;
+  flex-shrink:0;
+}
+.sp-transit{background:var(--white);color:#000}
+.sp-customs{background:#000;color:var(--dim1);border:1px solid #222200}
+.sp-warehouse{background:#000;color:var(--dim2);border:1px solid var(--border)}
+.sp-delivered{background:#000;color:var(--dim1);border:1px solid var(--border)}
+
+/* Progress */
+.prog-row{display:flex;align-items:center;gap:3px;margin-bottom:5px}
+.pd{width:7px;height:7px;flex-shrink:0}
+.pd.done{background:var(--white)}
+.pd.active{background:var(--white);outline:2px solid var(--white);outline-offset:2px}
+.pd.todo{background:var(--dim3);border:1px solid var(--border2)}
+.pl{flex:1;height:1px}
+.pl.done{background:var(--white)}
+.pl.todo{background:var(--border)}
+.prog-labs{
+  display:flex;justify-content:space-between;
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  letter-spacing:1px;text-transform:uppercase;
+}
+.prog-labs span.cur{color:var(--white)}
+
+.pc-foot{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--dim3);
+}
+.pc-wt{
+  font-family:var(--font-body);
+  font-size:10px;color:var(--dim2);
+  display:flex;align-items:center;gap:5px;
+}
+.pc-cost{
+  font-family:var(--font-disp);
+  font-size:14px;font-weight:900;color:var(--white);
+}
+
+/* ─── PHOTO STRIP ─── */
+.photo-strip{
+  display:flex;gap:8px;
+  padding:0 20px;margin-bottom:10px;
+  overflow-x:auto;scrollbar-width:none;
+}
+.photo-strip::-webkit-scrollbar{display:none}
+.photo-thumb{
+  width:72px;height:72px;flex-shrink:0;
+  background:var(--surface);border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;cursor:pointer;
+}
+.photo-thumb svg{width:100%;height:100%}
+.photo-thumb:active{border-color:var(--border2)}
+.photo-add{
+  width:72px;height:72px;flex-shrink:0;
+  background:#000;border:1px dashed var(--border2);
+  display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px;cursor:pointer;
+}
+.photo-add span{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  letter-spacing:1px;text-transform:uppercase;
+}
+
+/* ─── QUICK ACTIONS ─── */
+.qa-grid{
+  padding:0 20px 4px;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;
+}
+.qa{
+  background:var(--card);border:1px solid var(--border);
+  padding:13px 12px;cursor:pointer;
+  display:flex;flex-direction:column;gap:7px;
+  position:relative;overflow:hidden;
+  transition:border-color .15s;
+}
+.qa:active{background:var(--surface);border-color:var(--border2)}
+.qa-ht{
+  position:absolute;bottom:0;right:0;width:45px;height:45px;
+  background-image:radial-gradient(circle,#fff 1px,transparent 1px);
+  background-size:5px 5px;opacity:.04;
+}
+.qa-ico{
+  width:28px;height:28px;
+  border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;color:var(--white);
+}
+.qa-lbl{
+  font-family:var(--font-disp);
+  font-size:12px;font-weight:900;
+  color:var(--white);text-transform:uppercase;letter-spacing:1px;
+}
+.qa-sub{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  letter-spacing:1px;text-transform:uppercase;
+}
+
+/* ─── DETAIL SCREEN ─── */
+.detail-header{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 20px;border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.back-btn{
+  width:32px;height:32px;
+  background:#000;border:1px solid var(--border2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:16px;color:var(--white);cursor:pointer;flex-shrink:0;
+}
+.back-btn:active{background:var(--surface)}
+.detail-title{
+  font-family:var(--font-disp);
+  font-size:18px;font-weight:900;font-style:italic;
+  color:var(--white);text-transform:uppercase;letter-spacing:.5px;
+  flex:1;
+}
+.detail-id{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);letter-spacing:2px;text-transform:uppercase;
+}
+
+/* Timeline */
+.timeline{padding:16px 20px 8px}
+.tl-item{display:flex;gap:14px;padding-bottom:20px;position:relative}
+.tl-item:last-child{padding-bottom:0}
+.tl-left{display:flex;flex-direction:column;align-items:center;width:16px;flex-shrink:0}
+.tl-dot{width:12px;height:12px;flex-shrink:0}
+.tl-dot.done{background:var(--white)}
+.tl-dot.active{background:var(--white);outline:2px solid var(--white);outline-offset:2px}
+.tl-dot.todo{background:#000;border:1px solid var(--border2)}
+.tl-line{flex:1;width:1px;background:var(--border);margin-top:4px}
+.tl-line.done{background:var(--white)}
+.tl-right{flex:1;padding-top:0}
+.tl-stage{
+  font-family:var(--font-disp);
+  font-size:13px;font-weight:900;
+  text-transform:uppercase;letter-spacing:1px;line-height:1.1;
+  margin-bottom:2px;
+}
+.tl-stage.done{color:var(--white)}
+.tl-stage.active{color:var(--white)}
+.tl-stage.todo{color:var(--dim2)}
+.tl-date{
+  font-family:var(--font-body);
+  font-size:10px;color:var(--dim2);letter-spacing:1px;
+}
+.tl-note{
+  font-family:var(--font-body);
+  font-size:10px;color:var(--dim1);
+  margin-top:3px;line-height:1.4;
+}
+
+/* Info rows */
+.info-rows{padding:0 20px}
+.info-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:9px 0;border-bottom:1px solid var(--dim3);
+}
+.info-row:last-child{border-bottom:none}
+.info-key{
+  font-family:var(--font-body);
+  font-size:10px;color:var(--dim2);
+  text-transform:uppercase;letter-spacing:2px;
+}
+.info-val{
+  font-family:var(--font-disp);
+  font-size:13px;font-weight:700;
+  color:var(--white);text-transform:uppercase;letter-spacing:.5px;
+}
+
+/* Photo section in detail */
+.photo-sec{padding:0 20px 16px}
+.photo-grid{
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;
+  margin-top:8px;
+}
+.photo-item{
+  aspect-ratio:1;background:var(--surface);
+  border:1px solid var(--border);
+  display:flex;align-items:center;justify-content:center;
+  position:relative;overflow:hidden;cursor:pointer;
+}
+.photo-item svg{width:100%;height:100%}
+.photo-label{
+  position:absolute;bottom:4px;left:4px;
+  font-family:var(--font-body);
+  font-size:8px;color:var(--dim1);
+  text-transform:uppercase;letter-spacing:1px;
+}
+
+/* Action row */
+.action-row{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;padding:0 20px 16px;
+}
+
+/* ─── CALCULATOR SCREEN ─── */
+.calc-zone{padding:20px}
+.calc-field{margin-bottom:14px}
+.field-label{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  text-transform:uppercase;letter-spacing:3px;margin-bottom:6px;
+}
+.field-input{
+  width:100%;padding:12px 14px;
+  background:#000;border:1px solid var(--border2);
+  font-family:var(--font-disp);font-size:16px;
+  font-weight:700;color:var(--white);
+  letter-spacing:.5px;outline:none;
+  -webkit-appearance:none;
+}
+.field-input:focus{border-color:var(--dim1)}
+.field-input::placeholder{color:var(--dim2)}
+select.field-input{cursor:pointer}
+select.field-input option{background:#111;color:#fff}
+.calc-result{
+  background:var(--surface);border:1px solid var(--border2);
+  padding:16px;margin-bottom:16px;
+}
+.calc-result-label{
+  font-family:var(--font-body);
+  font-size:9px;color:var(--dim2);
+  text-transform:uppercase;letter-spacing:3px;margin-bottom:6px;
+}
+.calc-result-num{
+  font-family:var(--font-disp);
+  font-size:32px;font-weight:900;
+  color:var(--white);letter-spacing:-1px;
+}
+.calc-result-note{
+  font-family:var(--font-body);
+  font-size:10px;color:var(--dim2);margin-top:4px;
+}
+
+/* ─── ADD TRACK SCREEN ─── */
+.add-track-zone{padding:20px}
+.track-big-input{
+  width:100%;padding:14px;
+  background:#000;border:1px solid var(--border2);
+  font-family:var(--font-disp);font-size:20px;
+  font-weight:900;color:var(--white);
+  letter-spacing:1px;text-transform:uppercase;
+  outline:none;margin-bottom:12px;
+}
+.track-big-input:focus{border-color:var(--dim1)}
+.track-big-input::placeholder{color:var(--dim3);font-size:16px;text-transform:none;letter-spacing:.5px}
+.hint-row{
+  display:flex;align-items:flex-start;gap:8px;
+  padding:12px;border:1px solid var(--border);
+  margin-bottom:14px;
+}
+.hint-row svg{flex-shrink:0;margin-top:1px}
+.hint-text{
+  font-family:var(--font-body);
+  font-size:11px;color:var(--dim1);line-height:1.5;
+}
+
+/* ─── BOTTOM NAV ─── */
+.bnav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:430px;
+  height:calc(64px + var(--safe-bottom));
+  background:#000;
+  border-top:1px solid var(--border);
+  display:flex;justify-content:space-around;align-items:flex-start;
+  padding:0 4px;
+  padding-bottom: var(--safe-bottom);
+  z-index:100;
+}
+.ni{
+  display:flex;flex-direction:column;align-items:center;
+  gap:3px;flex:1;padding:6px 0;cursor:pointer;
+  font-family:var(--font-body);
+  font-size:9px;letter-spacing:1px;text-transform:uppercase;
+  font-weight:400;border:none;background:none;
+  transition:color .15s;
+}
+.ni.act{color:var(--white)}
+.ni.off{color:var(--dim3)}
+.ni svg{width:22px;height:22px}
+
+/* ─── SCROLLABLE CONTENT ─── */
+.scroll-content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.scroll-content::-webkit-scrollbar{display:none}
+
+/* ─── UTILS ─── */
+.mt8{margin-top:8px}
+.mt12{margin-top:12px}
+.mt16{margin-top:16px}
+.gap8{gap:8px}
+.full-btn{
+  width:calc(100% - 40px);margin:0 20px 16px;
+  padding:13px 0;
+  font-family:var(--font-disp);
+  font-size:13px;font-weight:900;
+  letter-spacing:3px;text-transform:uppercase;
+}
+
+/* ─── TOAST УВЕДОМЛЕНИЕ ─── */
+#tg-toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:#fff;color:#000;
+  font-family:var(--font-disp);font-size:12px;font-weight:900;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:10px 20px;
+  opacity:0;pointer-events:none;
+  transition:opacity .2s, transform .2s;
+  z-index:200;white-space:nowrap;
+}
+#tg-toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ════════════ ГЛАВНАЯ ════════════ -->
+  <div id="screen-home" class="screen active">
+    <div class="scroll-content">
+
+      <!-- HERO -->
+      <div class="hero">
+        <div class="hero-ht"></div>
+        <div class="hero-glow"></div>
+        <div class="hero-brush1"></div>
+        <div class="hero-brush2"></div>
+        <div class="hero-brush3"></div>
+
+        <!-- Силуэт фигуры -->
+        <div class="hero-figure">
+          <svg viewBox="0 0 118 140" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="ht0" patternUnits="userSpaceOnUse" width="5" height="5">
+                <circle cx="2.5" cy="2.5" r="1" fill="#fff"/>
+              </pattern>
+              <mask id="fm0">
+                <rect width="118" height="140" fill="#000"/>
+                <ellipse cx="62" cy="36" rx="24" ry="28" fill="url(#ht0)" opacity=".9"/>
+                <ellipse cx="62" cy="34" rx="16" ry="20" fill="#fff" opacity=".75"/>
+                <ellipse cx="56" cy="28" rx="9" ry="9" fill="#fff"/>
+                <rect x="30" y="62" width="66" height="78" fill="url(#ht0)" opacity=".8"/>
+                <rect x="36" y="66" width="54" height="60" fill="#fff" opacity=".5"/>
+                <rect x="46" y="66" width="30" height="10" fill="#fff" opacity=".85"/>
+                <rect x="53" y="76" width="15" height="64" fill="#fff" opacity=".35"/>
+                <polygon points="30,70 40,66 40,140 30,140" fill="#fff" opacity=".25"/>
+                <polygon points="96,70 84,66 84,140 96,140" fill="#fff" opacity=".12"/>
+                <ellipse cx="61" cy="58" rx="15" ry="9" fill="url(#ht0)" opacity=".6"/>
+                <rect width="118" height="140" fill="url(#ht0)" opacity=".1"/>
+              </mask>
+            </defs>
+            <rect width="118" height="140" fill="#000"/>
+            <rect width="118" height="140" fill="#fff" mask="url(#fm0)"/>
+            <rect width="118" height="140" fill="#000" opacity=".3"/>
+            <rect y="90" width="118" height="50" fill="#000" opacity=".55"/>
+          </svg>
+        </div>
+
+        <div class="hero-content">
+          <div class="brand-line1">MOGS<span class="brand-sep">·</span></div>
+          <div class="brand-line2">TERRA</div>
+          <div class="brand-logistic">LOGISTIC</div>
+          <div class="brand-sub">Китай · Весь Мир</div>
+        </div>
+        <div class="star-mark">&#10022;</div>
+      </div>
+
+      <!-- БАЛАНС -->
+      <div class="bal-zone">
+        <div class="bal-ey">Мой баланс</div>
+        <div class="bal-num">$124<span class="bal-cents">.50</span></div>
+        <div class="bal-btns">
+          <button class="btn-fill" onclick="tgAlert('Пополнение баланса в разработке')">
+            + Пополнить
+          </button>
+          <button class="btn-out" onclick="tgAlert('История операций в разработке')">
+            ≡ История
+          </button>
+        </div>
+      </div>
+
+      <div class="divline-full"></div>
+
+      <!-- ПОСЫЛКИ -->
+      <div class="sec-hd">
+        <span class="sec-lbl">Мои посылки</span>
+        <span class="sec-link" onclick="navTo('screen-parcels')">Все →</span>
+      </div>
+
+      <div class="pcard" onclick="openParcel('CN-2025-0419')">
+        <div class="pcard-ht"></div>
+        <div class="pc-toprow">
+          <div>
+            <div class="pc-id">CN · 2025 · 0419</div>
+            <div class="pc-name">Nike Air Max 95</div>
+            <div class="pc-from">Taobao · Шанхай → Братислава</div>
+          </div>
+          <div class="spill sp-customs">Таможня</div>
+        </div>
+        <div class="prog-row">
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd active"></div><div class="pl todo"></div>
+          <div class="pd todo"></div><div class="pl todo"></div>
+          <div class="pd todo"></div>
+        </div>
+        <div class="prog-labs">
+          <span>Склад</span><span>Отпр.</span>
+          <span class="cur">Таможня</span>
+          <span>Путь</span><span>Финиш</span>
+        </div>
+        <div class="pc-foot">
+          <div class="pc-wt">&#9660; 1.4 кг · 9–12 дней</div>
+          <div class="pc-cost">$38.20</div>
+        </div>
+      </div>
+
+      <div class="pcard" onclick="openParcel('CN-2025-0388')">
+        <div class="pcard-ht"></div>
+        <div class="pc-toprow">
+          <div>
+            <div class="pc-id">CN · 2025 · 0388</div>
+            <div class="pc-name">USB-C Кабель ×3</div>
+            <div class="pc-from">1688 · Гуанчжоу → Братислава</div>
+          </div>
+          <div class="spill sp-transit">В пути</div>
+        </div>
+        <div class="prog-row">
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd active"></div><div class="pl todo"></div>
+          <div class="pd todo"></div>
+        </div>
+        <div class="prog-labs">
+          <span>Склад</span><span>Отпр.</span>
+          <span>Таможня</span>
+          <span class="cur">Путь</span><span>Финиш</span>
+        </div>
+        <div class="pc-foot">
+          <div class="pc-wt">&#9660; 0.3 кг · 3 дня</div>
+          <div class="pc-cost">$12.00</div>
+        </div>
+      </div>
+
+      <div class="divline-full mt8"></div>
+
+      <!-- БЫСТРЫЕ ДЕЙСТВИЯ -->
+      <div class="sec-hd">
+        <span class="sec-lbl">Действия</span>
+      </div>
+      <div class="qa-grid">
+        <div class="qa" onclick="navTo('screen-addtrack')">
+          <div class="qa-ht"></div>
+          <div class="qa-ico">&#9776;</div>
+          <div class="qa-lbl">Добавить трек</div>
+          <div class="qa-sub">Своя посылка</div>
+        </div>
+        <div class="qa" onclick="navTo('screen-buyout')">
+          <div class="qa-ht"></div>
+          <div class="qa-ico">&#9636;</div>
+          <div class="qa-lbl">Выкупить товар</div>
+          <div class="qa-sub">Ссылка → купим</div>
+        </div>
+        <div class="qa" onclick="navTo('screen-calc')">
+          <div class="qa-ht"></div>
+          <div class="qa-ico">&#9632;</div>
+          <div class="qa-lbl">Калькулятор</div>
+          <div class="qa-sub">Цена доставки</div>
+        </div>
+        <div class="qa" onclick="navTo('screen-invite')">
+          <div class="qa-ht"></div>
+          <div class="qa-ico">&#9670;</div>
+          <div class="qa-lbl">Пригласить</div>
+          <div class="qa-sub">Скидка за друга</div>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════ ПОСЫЛКИ ════════════ -->
+  <div id="screen-parcels" class="screen">
+    <div class="detail-header">
+      <button class="back-btn" onclick="navBack()">&#8592;</button>
+      <div>
+        <div class="detail-title">Посылки</div>
+        <div class="detail-id">3 активных отправления</div>
+      </div>
+    </div>
+    <div class="scroll-content" style="padding-top:8px">
+      <div class="pcard" onclick="openParcel('CN-2025-0419')">
+        <div class="pcard-ht"></div>
+        <div class="pc-toprow">
+          <div>
+            <div class="pc-id">CN · 2025 · 0419</div>
+            <div class="pc-name">Nike Air Max 95</div>
+            <div class="pc-from">Taobao · Шанхай → Братислава</div>
+          </div>
+          <div class="spill sp-customs">Таможня</div>
+        </div>
+        <div class="prog-row">
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd active"></div><div class="pl todo"></div>
+          <div class="pd todo"></div><div class="pl todo"></div>
+          <div class="pd todo"></div>
+        </div>
+        <div class="prog-labs">
+          <span>Склад</span><span>Отпр.</span><span class="cur">Таможня</span><span>Путь</span><span>Финиш</span>
+        </div>
+        <div class="pc-foot">
+          <div class="pc-wt">&#9660; 1.4 кг · 9–12 дней</div>
+          <div class="pc-cost">$38.20</div>
+        </div>
+      </div>
+
+      <div class="pcard" onclick="openParcel('CN-2025-0388')">
+        <div class="pcard-ht"></div>
+        <div class="pc-toprow">
+          <div>
+            <div class="pc-id">CN · 2025 · 0388</div>
+            <div class="pc-name">USB-C Кабель ×3</div>
+            <div class="pc-from">1688 · Гуанчжоу → Братислава</div>
+          </div>
+          <div class="spill sp-transit">В пути</div>
+        </div>
+        <div class="prog-row">
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd done"></div><div class="pl done"></div>
+          <div class="pd active"></div><div class="pl todo"></div>
+          <div class="pd todo"></div>
+        </div>
+        <div class="prog-labs">
+          <span>Склад</span><span>Отпр.</span><span>Таможня</span><span class="cur">Путь</span><span>Финиш</span>
+        </div>
+        <div class="pc-foot">
+          <div class="pc-wt">&#9660; 0.3 кг · 3 дня</div>
+          <div class="pc-cost">$12.00</div>
+        </div>
+      </div>
+
+      <div class="pcard" onclick="openParcel('CN-2025-0311')">
+        <div class="pcard-ht"></div>
+        <div class="pc-toprow">
+          <div>
+            <div class="pc-id">CN · 2025 · 0311</div>
+            <div class="pc-name">Рюкзак Xiaomi</div>
+            <div class="pc-from">Pinduoduo · Пекин → Братислава</div>
+          </div>
+          <div class="spill sp-warehouse">На складе</div>
+        </div>
+        <div class="prog-row">
+          <div class="pd active"></div><div class="pl todo"></div>
+          <div class="pd todo"></div><div class="pl todo"></div>
+          <div class="pd todo"></div><div class="pl todo"></div>
+          <div class="pd todo"></div><div class="pl todo"></div>
+          <div class="pd todo"></div>
+        </div>
+        <div class="prog-labs">
+          <span class="cur">Склад</span><span>Отпр.</span><span>Таможня</span><span>Путь</span><span>Финиш</span>
+        </div>
+        <div class="pc-foot">
+          <div class="pc-wt">&#9660; 0.8 кг · ожидание</div>
+          <div class="pc-cost">$19.60</div>
+        </div>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════ ДЕТАЛИ ПОСЫЛКИ ════════════ -->
+  <div id="screen-parcel-detail" class="screen">
+    <div class="detail-header">
+      <button class="back-btn" onclick="navBack()">&#8592;</button>
+      <div style="flex:1">
+        <div class="detail-title" id="detail-name">Nike Air Max 95</div>
+        <div class="detail-id" id="detail-id">CN · 2025 · 0419</div>
+      </div>
+      <div class="spill sp-customs" id="detail-status">Таможня</div>
+    </div>
+    <div class="scroll-content">
+
+      <!-- ФОТО ТОВАРА -->
+      <div class="sec-hd">
+        <span class="sec-lbl">Фото товара</span>
+        <span class="sec-link">Запросить ещё</span>
+      </div>
+      <div class="photo-strip" id="photo-strip">
+        <div class="photo-thumb">
+          <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+            <rect width="72" height="72" fill="#0a0a0a"/>
+            <rect x="8" y="20" width="56" height="36" fill="#1a1a1a" rx="2"/>
+            <ellipse cx="36" cy="38" rx="14" ry="10" fill="#2a2a2a"/>
+            <ellipse cx="36" cy="38" rx="9" ry="7" fill="#383838"/>
+            <rect x="16" y="20" width="40" height="8" fill="#222"/>
+            <text x="36" y="66" text-anchor="middle" fill="#2a2a2a" font-size="7" font-family="Arial" letter-spacing="1">ФОТО 1</text>
+          </svg>
+        </div>
+        <div class="photo-thumb">
+          <svg viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+            <rect width="72" height="72" fill="#0a0a0a"/>
+            <rect x="10" y="15" width="52" height="42" fill="#161616" rx="2"/>
+            <rect x="18" y="22" width="36" height="28" fill="#222"/>
+            <line x1="18" y1="22" x2="54" y2="50" stroke="#2a2a2a" stroke-width="1"/>
+            <line x1="54" y1="22" x2="18" y2="50" stroke="#2a2a2a" stroke-width="1"/>
+            <text x="36" y="66" text-anchor="middle" fill="#2a2a2a" font-size="7" font-family="Arial" letter-spacing="1">ФОТО 2</text>
+          </svg>
+        </div>
+        <div class="photo-add">
+          <span style="font-size:18px;color:#222">+</span>
+          <span>Фото</span>
+        </div>
+      </div>
+
+      <!-- ТАЙМЛАЙН -->
+      <div class="sec-hd">
+        <span class="sec-lbl">Маршрут</span>
+      </div>
+      <div class="timeline">
+        <div class="tl-item">
+          <div class="tl-left">
+            <div class="tl-dot done"></div>
+            <div class="tl-line done"></div>
+          </div>
+          <div class="tl-right">
+            <div class="tl-stage done">Поступил на склад</div>
+            <div class="tl-date">12 мая 2025 · 10:42</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left">
+            <div class="tl-dot done"></div>
+            <div class="tl-line done"></div>
+          </div>
+          <div class="tl-right">
+            <div class="tl-stage done">Отправлен из Китая</div>
+            <div class="tl-date">15 мая 2025 · 08:00</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left">
+            <div class="tl-dot active"></div>
+            <div class="tl-line todo"></div>
+          </div>
+          <div class="tl-right">
+            <div class="tl-stage active">Таможня</div>
+            <div class="tl-date">С 19 мая 2025</div>
+            <div class="tl-note">Ожидание таможенного оформления</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left">
+            <div class="tl-dot todo"></div>
+            <div class="tl-line todo"></div>
+          </div>
+          <div class="tl-right">
+            <div class="tl-stage todo">В пути к получателю</div>
+            <div class="tl-date">~23–24 мая 2025</div>
+          </div>
+        </div>
+        <div class="tl-item">
+          <div class="tl-left">
+            <div class="tl-dot todo"></div>
+          </div>
+          <div class="tl-right">
+            <div class="tl-stage todo">Доставлено</div>
+            <div class="tl-date">~25–28 мая 2025</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="divline-full"></div>
+
+      <!-- ДЕТАЛИ -->
+      <div class="sec-hd">
+        <span class="sec-lbl">Детали</span>
+      </div>
+      <div class="info-rows">
+        <div class="info-row">
+          <span class="info-key">Маркетплейс</span>
+          <span class="info-val">Taobao</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Откуда</span>
+          <span class="info-val">Шанхай, CN</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Куда</span>
+          <span class="info-val">Братислава, SK</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Вес</span>
+          <span class="info-val">1.4 кг</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Стоимость</span>
+          <span class="info-val">$38.20</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Страховка (3%)</span>
+          <span class="info-val">$1.15</span>
+        </div>
+      </div>
+
+      <div class="divline-full mt12"></div>
+
+      <div class="action-row mt16" style="margin-top:16px">
+        <button class="btn-fill full-btn" style="margin:0" onclick="tgAlert('Запрос фото отправлен менеджеру')">
+          Запросить фото
+        </button>
+        <button class="btn-out full-btn" style="margin:0"
+          onclick="tgOpenLink('https://t.me/mogsterra_manager')">
+          Менеджер
+        </button>
+      </div>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════ КАЛЬКУЛЯТОР ════════════ -->
+  <div id="screen-calc" class="screen">
+    <div class="detail-header">
+      <button class="back-btn" onclick="navBack()">&#8592;</button>
+      <div>
+        <div class="detail-title">Калькулятор</div>
+        <div class="detail-id">Стоимость доставки</div>
+      </div>
+    </div>
+    <div class="scroll-content">
+      <div class="calc-zone">
+        <div class="calc-field">
+          <div class="field-label">Вес (кг)</div>
+          <input class="field-input" type="number" id="calc-weight" placeholder="Например: 2.5" min="0.1" step="0.1" oninput="calcPrice()"/>
+        </div>
+        <div class="calc-field">
+          <div class="field-label">Страна доставки</div>
+          <select class="field-input" id="calc-country" onchange="calcPrice()">
+            <option value="">— Выберите страну —</option>
+            <option value="sk">Словакия / Чехия (€4.5/кг)</option>
+            <option value="de">Германия / Австрия (€5.0/кг)</option>
+            <option value="pl">Польша / Венгрия (€4.8/кг)</option>
+            <option value="ua">Украина (€3.5/кг)</option>
+            <option value="kz">Казахстан / Россия (€3.0/кг)</option>
+            <option value="other">Другая страна — уточнить</option>
+          </select>
+        </div>
+        <div class="calc-field">
+          <div class="field-label">Стоимость товара ($) — для страховки</div>
+          <input class="field-input" type="number" id="calc-value" placeholder="Например: 150" min="0" oninput="calcPrice()"/>
+        </div>
+
+        <div class="calc-result" id="calc-result" style="display:none">
+          <div class="calc-result-label">Итого к оплате</div>
+          <div class="calc-result-num" id="calc-total">$0.00</div>
+          <div class="calc-result-note" id="calc-breakdown"></div>
+        </div>
+
+        <button class="btn-fill full-btn" style="margin:0;width:100%" onclick="tgAlert('Оформление заказа в разработке')">
+          Оформить доставку
+        </button>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ ДОБАВИТЬ ТРЕК ════════════ -->
+  <div id="screen-addtrack" class="screen">
+    <div class="detail-header">
+      <button class="back-btn" onclick="navBack()">&#8592;</button>
+      <div>
+        <div class="detail-title">Добавить трек</div>
+        <div class="detail-id">Своя посылка на наш склад</div>
+      </div>
+    </div>
+    <div class="scroll-content">
+      <div class="add-track-zone">
+        <div class="field-label">Трек-номер посылки</div>
+        <input class="track-big-input" type="text" placeholder="Введите трек-номер..." id="track-input"/>
+
+        <div class="hint-row">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <rect width="16" height="16" stroke="#2a2a2a" stroke-width="1" fill="none"/>
+            <text x="8" y="12" text-anchor="middle" fill="#444" font-size="11" font-family="Arial">i</text>
+          </svg>
+          <div class="hint-text">
+            Трек-номер указан в подтверждении заказа на маркетплейсе (Taobao, 1688, Pinduoduo и др.).
+            Формат: обычно начинается с JT, YT, SF или содержит буквы CN.
+          </div>
+        </div>
+
+        <div class="calc-field">
+          <div class="field-label">Название товара</div>
+          <input class="field-input" type="text" id="track-item-name" placeholder="Например: Nike Air Max"/>
+        </div>
+        <div class="calc-field">
+          <div class="field-label">Маркетплейс</div>
+          <select class="field-input" id="track-marketplace">
+            <option>Taobao</option>
+            <option>1688</option>
+            <option>Pinduoduo</option>
+            <option>Weidian</option>
+            <option>Yupoo</option>
+            <option>Poizon</option>
+            <option>Другой</option>
+          </select>
+        </div>
+
+        <button class="btn-fill full-btn" style="margin:0;width:100%;margin-top:8px" onclick="submitTrack()">
+          Подтвердить
+        </button>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ ВЫКУП ТОВАРА ════════════ -->
+  <div id="screen-buyout" class="screen">
+    <div class="detail-header">
+      <button class="back-btn" onclick="navBack()">&#8592;</button>
+      <div>
+        <div class="detail-title">Выкуп товара</div>
+        <div class="detail-id">Отправь ссылку — мы купим</div>
+      </div>
+    </div>
+    <div class="scroll-content">
+      <div class="add-track-zone">
+        <div class="calc-field">
+          <div class="field-label">Ссылка на товар</div>
+          <input class="field-input" type="url" id="buyout-url" placeholder="https://item.taobao.com/..."/>
+        </div>
+        <div class="calc-field">
+          <div class="field-label">Размер / Цвет / Вариант</div>
+          <input class="field-input" type="text" id="buyout-variant" placeholder="Например: 42 EU, чёрный"/>
+        </div>
+        <div class="calc-field">
+          <div class="field-label">Количество</div>
+          <input class="field-input" type="number" id="buyout-qty" value="1" min="1"/>
+        </div>
+        <div class="calc-field">
+          <div class="field-label">Страна доставки</div>
+          <select class="field-input" id="buyout-country">
+            <option>Словакия</option>
+            <option>Чехия</option>
+            <option>Германия</option>
+            <option>Польша</option>
+            <option>Украина</option>
+            <option>Казахстан</option>
+            <option>Другая</option>
+          </select>
+        </div>
+
+        <div class="calc-result" style="display:block;margin-bottom:16px">
+          <div class="calc-result-label">Наша комиссия</div>
+          <div class="calc-result-num" style="font-size:22px">8% до $1000 · 6% от $1000</div>
+          <div class="calc-result-note">+ $30¥ доставка по Китаю · Фото-контроль $2/шт</div>
+        </div>
+
+        <button class="btn-fill full-btn" style="margin:0;width:100%" onclick="submitBuyout()">
+          Отправить заявку
+        </button>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ ПРИГЛАСИТЬ ════════════ -->
+  <div id="screen-invite" class="screen">
+    <div class="detail-header">
+      <button class="back-btn" onclick="navBack()">&#8592;</button>
+      <div>
+        <div class="detail-title">Пригласить друга</div>
+        <div class="detail-id">Скидка за каждого</div>
+      </div>
+    </div>
+    <div class="scroll-content">
+      <div class="add-track-zone">
+        <div class="calc-result" style="display:block;margin-bottom:16px" onclick="copyRefCode()">
+          <div class="calc-result-label">Ваш реферальный код</div>
+          <div class="calc-result-num" style="font-size:28px;letter-spacing:4px" id="ref-code">MOGS-4821</div>
+          <div class="calc-result-note">Нажмите чтобы скопировать</div>
+        </div>
+
+        <div class="info-rows" style="margin-bottom:16px">
+          <div class="info-row">
+            <span class="info-key">Приглашено друзей</span>
+            <span class="info-val">3</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Ваша скидка</span>
+            <span class="info-val">5%</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">До следующего уровня</span>
+            <span class="info-val">2 друга</span>
+          </div>
+          <div class="info-row">
+            <span class="info-key">Скидка друга при регистрации</span>
+            <span class="info-val">3%</span>
+          </div>
+        </div>
+
+        <button class="btn-fill full-btn" style="margin:0;width:100%" onclick="shareInvite()">
+          Поделиться в Telegram
+        </button>
+        <div style="height:16px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════ ПРОФИЛЬ ════════════ -->
+  <div id="screen-profile" class="screen">
+    <div class="hero" style="height:100px">
+      <div class="hero-ht"></div>
+      <div class="hero-content" style="padding-top:14px">
+        <div class="brand-line1" style="font-size:32px">MOGS<span class="brand-sep">·</span></div>
+        <div class="brand-line2" style="font-size:32px;margin-left:4px">TERRA</div>
+      </div>
+      <div class="star-mark">&#10022;</div>
+    </div>
+    <div class="scroll-content" style="padding-top:8px">
+      <div class="info-rows" style="padding:0 20px">
+        <div class="info-row">
+          <span class="info-key">Имя</span>
+          <span class="info-val" id="profile-name">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Telegram</span>
+          <span class="info-val" id="profile-username">—</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Баланс</span>
+          <span class="info-val">$124.50</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Посылок всего</span>
+          <span class="info-val">12</span>
+        </div>
+        <div class="info-row">
+          <span class="info-key">Уровень</span>
+          <span class="info-val">Стандарт</span>
+        </div>
+      </div>
+
+      <div class="divline-full mt16"></div>
+      <div class="sec-hd"><span class="sec-lbl">Настройки</span></div>
+
+      <div class="info-rows" style="padding:0 20px">
+        <div class="info-row" style="cursor:pointer">
+          <span class="info-key">Адрес доставки</span>
+          <span class="info-val" style="color:var(--dim2)">→</span>
+        </div>
+        <div class="info-row" style="cursor:pointer">
+          <span class="info-key">Уведомления</span>
+          <span class="info-val" style="color:var(--dim2)">→</span>
+        </div>
+        <div class="info-row" style="cursor:pointer">
+          <span class="info-key">Адрес склада в Китае</span>
+          <span class="info-val" style="color:var(--dim2)">→</span>
+        </div>
+        <div class="info-row" style="cursor:pointer" onclick="navTo('screen-invite')">
+          <span class="info-key">Реферальная программа</span>
+          <span class="info-val" style="color:var(--dim2)">→</span>
+        </div>
+      </div>
+
+      <div class="divline-full mt12"></div>
+      <button class="btn-out full-btn mt16" style="margin-left:20px;margin-right:20px;width:calc(100% - 40px)"
+        onclick="tgOpenLink('https://t.me/mogsterra_manager')">
+        Написать менеджеру
+      </button>
+      <div style="height:16px"></div>
+    </div>
+  </div>
+
+  <!-- ════════════ НАВИГАЦИЯ ════════════ -->
+  <nav class="bnav">
+    <button class="ni act" id="nav-home" onclick="navTo('screen-home')" aria-label="Главная">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12L12 3l9 9"/><path d="M9 21V12h6v9"/>
+      </svg>
+      <span>Главная</span>
+    </button>
+    <button class="ni off" id="nav-parcels" onclick="navTo('screen-parcels')" aria-label="Посылки">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="7" width="20" height="14" rx="1"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/>
+      </svg>
+      <span>Посылки</span>
+    </button>
+    <button class="ni off" id="nav-buyout" onclick="navTo('screen-buyout')" aria-label="Выкуп">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/>
+      </svg>
+      <span>Выкуп</span>
+    </button>
+    <button class="ni off" id="nav-profile" onclick="navTo('screen-profile')" aria-label="Профиль">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+      <span>Профиль</span>
+    </button>
+  </nav>
+
+</div>
+
+<!-- Toast element -->
+<div id="tg-toast"></div>
+
+<script>
+/* ═══════════════════════════════════════════
+   ✅  TELEGRAM MINI APP — ИНИЦИАЛИЗАЦИЯ
+   ═══════════════════════════════════════════ */
+const twa = window.Telegram && window.Telegram.WebApp;
+
+if (twa) {
+  // Обязательные вызовы при старте
+  twa.ready();           // сообщаем TG что приложение готово
+  twa.expand();          // разворачиваем на весь экран
+
+  // Включаем нативное подтверждение закрытия
+  twa.enableClosingConfirmation();
+
+  // Применяем цветовую схему Telegram (light/dark)
+  document.documentElement.setAttribute('data-theme', twa.colorScheme);
+
+  // Кнопка «Назад» в заголовке Telegram
+  twa.BackButton.onClick(() => {
+    if (historyStack.length > 1) {
+      navBack();
+    } else {
+      twa.close();
+    }
+  });
+
+  // Заполняем данные пользователя из initDataUnsafe
+  const user = twa.initDataUnsafe && twa.initDataUnsafe.user;
+  if (user) {
+    const nameEl = document.getElementById('profile-name');
+    const userEl = document.getElementById('profile-username');
+    if (nameEl) nameEl.textContent = [user.first_name, user.last_name].filter(Boolean).join(' ') || 'Пользователь';
+    if (userEl) userEl.textContent = user.username ? '@' + user.username : '—';
+  }
+} else {
+  // Запуск не в Telegram — показываем как обычный сайт (для разработки)
+  console.info('[MOGS] Not in Telegram WebApp — running as standalone page');
+}
+
+/* ═══════════════════════════════════════════
+   ВСПОМОГАТЕЛЬНЫЕ TG-ФУНКЦИИ
+   ═══════════════════════════════════════════ */
+
+// Показать уведомление: сначала нативный TG haptic + popup,
+// если нет — простой toast
+function tgAlert(msg) {
+  if (twa) {
+    twa.HapticFeedback.notificationOccurred('success');
+    twa.showPopup({ message: msg, buttons: [{ type: 'ok', text: 'OK' }] });
+  } else {
+    showToast(msg);
+  }
+}
+
+// Открыть ссылку в Telegram (не в браузере)
+function tgOpenLink(url) {
+  if (twa) {
+    twa.openTelegramLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
+}
+
+// Toast для браузерного режима
+function showToast(msg) {
+  const el = document.getElementById('tg-toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+/* ═══════════════════════════════════════════
+   НАВИГАЦИЯ
+   ═══════════════════════════════════════════ */
+const navScreenMap = {
+  'screen-home':   'nav-home',
+  'screen-parcels':'nav-parcels',
+  'screen-buyout': 'nav-buyout',
+  'screen-profile':'nav-profile',
+};
+let historyStack = ['screen-home'];
+
+function navTo(screenId) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const target = document.getElementById(screenId);
+  if (!target) return;
+  target.classList.add('active');
+  document.querySelectorAll('.ni').forEach(n => n.classList.replace('act', 'off'));
+  const navId = navScreenMap[screenId];
+  if (navId) document.getElementById(navId).classList.replace('off', 'act');
+  if (historyStack[historyStack.length - 1] !== screenId) historyStack.push(screenId);
+  window.scrollTo(0, 0);
+
+  // Показываем / скрываем кнопку «Назад» в шапке Telegram
+  if (twa) {
+    historyStack.length > 1 ? twa.BackButton.show() : twa.BackButton.hide();
+  }
+}
+
+function navBack() {
+  if (historyStack.length > 1) {
+    historyStack.pop();
+    const prev = historyStack[historyStack.length - 1];
+    historyStack.pop(); // navTo добавит снова
+    navTo(prev);
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ДЕТАЛИ ПОСЫЛКИ
+   ═══════════════════════════════════════════ */
+const parcelData = {
+  'CN-2025-0419': { name: 'Nike Air Max 95',  status: 'Таможня',   statusClass: 'sp-customs'   },
+  'CN-2025-0388': { name: 'USB-C Кабель ×3',  status: 'В пути',    statusClass: 'sp-transit'   },
+  'CN-2025-0311': { name: 'Рюкзак Xiaomi',    status: 'На складе', statusClass: 'sp-warehouse' },
+};
+
+function openParcel(id) {
+  const d = parcelData[id];
+  if (!d) return;
+  document.getElementById('detail-name').textContent = d.name;
+  document.getElementById('detail-id').textContent   = id.replace(/-/g, ' · ');
+  const st = document.getElementById('detail-status');
+  st.textContent = d.status;
+  st.className   = 'spill ' + d.statusClass;
+  navTo('screen-parcel-detail');
+  if (twa) twa.HapticFeedback.impactOccurred('light');
+}
+
+/* ═══════════════════════════════════════════
+   КАЛЬКУЛЯТОР
+   ═══════════════════════════════════════════ */
+const rates = { sk: 4.5, de: 5.0, pl: 4.8, ua: 3.5, kz: 3.0 };
+
+function calcPrice() {
+  const w   = parseFloat(document.getElementById('calc-weight').value)  || 0;
+  const c   = document.getElementById('calc-country').value;
+  const val = parseFloat(document.getElementById('calc-value').value)   || 0;
+  const res = document.getElementById('calc-result');
+  if (!w || !c || c === 'other') { res.style.display = 'none'; return; }
+  const rate      = rates[c] || 4.5;
+  const delivery  = +(w * rate).toFixed(2);
+  const insurance = val > 0 ? +(val * 0.03).toFixed(2) : 0;
+  const total     = +(delivery + insurance).toFixed(2);
+  document.getElementById('calc-total').textContent     = '$' + total.toFixed(2);
+  document.getElementById('calc-breakdown').textContent =
+    w.toFixed(1) + 'кг × $' + rate + '/кг = $' + delivery.toFixed(2) +
+    (insurance > 0 ? ' · Страховка 3% = $' + insurance.toFixed(2) : '');
+  res.style.display = 'block';
+}
+
+/* ═══════════════════════════════════════════
+   ДОБАВИТЬ ТРЕК — отправка данных боту
+   ═══════════════════════════════════════════ */
+function submitTrack() {
+  const track = document.getElementById('track-input').value.trim();
+  const name  = document.getElementById('track-item-name').value.trim();
+  const mp    = document.getElementById('track-marketplace').value;
+
+  if (!track) {
+    if (twa) {
+      twa.HapticFeedback.notificationOccurred('error');
+      twa.showPopup({ message: 'Введите трек-номер', buttons: [{ type: 'ok' }] });
+    } else {
+      showToast('Введите трек-номер');
+    }
+    return;
+  }
+
+  // Передаём данные боту через sendData (закрывает mini app)
+  const payload = JSON.stringify({
+    action: 'add_track',
+    track,
+    name: name || '—',
+    marketplace: mp,
+    user_id: twa && twa.initDataUnsafe.user ? twa.initDataUnsafe.user.id : null,
+  });
+
+  if (twa) {
+    twa.sendData(payload);   // бот получит это в message.web_app_data
+  } else {
+    showToast('Трек ' + track + ' добавлен (demo)');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ВЫКУП ТОВАРА — отправка данных боту
+   ═══════════════════════════════════════════ */
+function submitBuyout() {
+  const url     = document.getElementById('buyout-url').value.trim();
+  const variant = document.getElementById('buyout-variant').value.trim();
+  const qty     = document.getElementById('buyout-qty').value;
+  const country = document.getElementById('buyout-country').value;
+
+  if (!url) {
+    if (twa) {
+      twa.HapticFeedback.notificationOccurred('error');
+      twa.showPopup({ message: 'Введите ссылку на товар', buttons: [{ type: 'ok' }] });
+    } else {
+      showToast('Введите ссылку на товар');
+    }
+    return;
+  }
+
+  const payload = JSON.stringify({
+    action: 'buyout',
+    url,
+    variant: variant || '—',
+    qty: parseInt(qty) || 1,
+    country,
+    user_id: twa && twa.initDataUnsafe.user ? twa.initDataUnsafe.user.id : null,
+  });
+
+  if (twa) {
+    twa.sendData(payload);
+  } else {
+    showToast('Заявка на выкуп отправлена (demo)');
+  }
+}
+
+/* ═══════════════════════════════════════════
+   РЕФЕРАЛЬНЫЙ КОД — копирование
+   ═══════════════════════════════════════════ */
+function copyRefCode() {
+  const code = document.getElementById('ref-code').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(() => {
+      if (twa) twa.HapticFeedback.notificationOccurred('success');
+      showToast('Код скопирован');
+    });
+  }
+}
+
+function shareInvite() {
+  const code = document.getElementById('ref-code').textContent;
+  const text = encodeURIComponent('Попробуй Mogsterra Logistic! Код: ' + code);
+  const link = encodeURIComponent('https://t.me/mogsterra_bot');
+  tgOpenLink('https://t.me/share/url?url=' + link + '&text=' + text);
+}
+</script>
+</body>
+</html>
